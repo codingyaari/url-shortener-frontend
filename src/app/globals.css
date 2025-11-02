@@ -1,0 +1,192 @@
+@import "tailwindcss";
+
+/* Tailwind CSS v4 - Enable dark mode with class strategy */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* React DatePicker Custom Styles */
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+.react-datepicker__input-container {
+  width: 100%;
+}
+
+.react-datepicker__input-container input {
+  width: 100% !important;
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
+/* Dark mode styles for date picker */
+.dark .react-datepicker {
+  background-color: #1f2937 !important;
+  border: 2px solid rgba(129, 140, 248, 0.6) !important;
+  color: white !important;
+}
+
+.dark .react-datepicker__header {
+  background-color: #111827 !important;
+  border-bottom: 1px solid rgba(129, 140, 248, 0.3) !important;
+}
+
+.dark .react-datepicker__current-month,
+.dark .react-datepicker__day-name {
+  color: white !important;
+}
+
+.dark .react-datepicker__day {
+  color: #e5e7eb !important;
+}
+
+.dark .react-datepicker__day:hover {
+  background-color: rgba(129, 140, 248, 0.3) !important;
+  color: white !important;
+}
+
+.dark .react-datepicker__day--selected {
+  background-color: rgba(129, 140, 248, 0.8) !important;
+  color: white !important;
+}
+
+.dark .react-datepicker__day--keyboard-selected {
+  background-color: rgba(129, 140, 248, 0.5) !important;
+  color: white !important;
+}
+
+.dark .react-datepicker__day--disabled {
+  color: #6b7280 !important;
+  opacity: 0.5 !important;
+}
+
+.dark .react-datepicker__day--today {
+  font-weight: bold;
+  color: rgba(129, 140, 248, 1) !important;
+}
+
+.dark .react-datepicker__triangle {
+  border-bottom-color: #1f2937 !important;
+}
+
+.dark .react-datepicker__triangle::before {
+  border-bottom-color: rgba(129, 140, 248, 0.6) !important;
+}
+
+/* Essential CSS variables for neon effects (Tailwind can't do these easily) */
+:root {
+  --neon-indigo: rgba(129, 140, 248, 1);
+  --neon-teal: rgba(45, 212, 191, 1);
+  --neon-violet: rgba(167, 139, 250, 1);
+  --neon-pink: rgba(236, 72, 153, 1);
+  --neon-cyan: rgba(34, 211, 238, 1);
+}
+
+/* Ensure dark mode works with class strategy */
+html.dark {
+  color-scheme: dark;
+  background-color: #000000 !important;
+}
+
+html.dark body {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) {
+  color-scheme: light;
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) body {
+  background-color: #ffffff !important;
+  color: #171717 !important;
+}
+
+/* Smooth transitions for theme switching */
+* {
+  transition: background-color 0.5s ease-in-out, color 0.5s ease-in-out, border-color 0.5s ease-in-out;
+}
+
+/* Neon text effects - enhanced for dark mode */
+.neon-text-indigo {
+  color: #818cf8;
+  text-shadow: 
+    0 0 10px var(--neon-indigo),
+    0 0 20px var(--neon-indigo),
+    0 0 30px var(--neon-indigo),
+    0 0 40px var(--neon-indigo),
+    0 0 60px var(--neon-indigo),
+    0 0 80px rgba(167, 139, 250, 0.6),
+    0 0 100px rgba(236, 72, 153, 0.4);
+}
+
+.neon-text-teal {
+  color: #2dd4bf;
+  text-shadow: 
+    0 0 10px var(--neon-teal),
+    0 0 20px var(--neon-teal),
+    0 0 30px var(--neon-teal),
+    0 0 50px var(--neon-teal),
+    0 0 70px rgba(34, 211, 238, 0.8);
+}
+
+.neon-text-violet {
+  color: #a78bfa;
+  text-shadow: 
+    0 0 10px var(--neon-violet),
+    0 0 20px var(--neon-violet),
+    0 0 30px var(--neon-violet),
+    0 0 50px var(--neon-violet),
+    0 0 70px rgba(236, 72, 153, 0.8);
+}
+
+/* Custom Scrollbar Styles */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 8px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 10px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.4);
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.6);
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-track {
+  background: rgba(129, 140, 248, 0.1);
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: rgba(129, 140, 248, 0.4);
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: rgba(129, 140, 248, 0.6);
+}
+
+/* Firefox scrollbar */
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.4) rgba(99, 102, 241, 0.1);
+}
+
+.dark .overflow-y-auto {
+  scrollbar-color: rgba(129, 140, 248, 0.4) rgba(129, 140, 248, 0.1);
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
