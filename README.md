@@ -1,36 +1,288 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+<div align="center">
 
-## Getting Started
+# 🔗 URL Shortener
 
-First, run the development server:
+**Transform long URLs into short, shareable links with real-time analytics**
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+[![Next.js](https://img.shields.io/badge/Next.js-16.0-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.2-blue?style=for-the-badge&logo=react)](https://reactjs.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38bdf8?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+
+![URL Shortener Preview](https://via.placeholder.com/800x400/6366f1/ffffff?text=URL+Shortener+Dashboard)
+
+</div>
+
+---
+
+## ✨ Features
+
+### 🚀 Core Functionality
+- **⚡ Lightning Fast** - Instant URL shortening with sub-millisecond redirect times
+- **📊 Real-Time Analytics** - Track clicks, geographic data, referrers, and device types
+- **🎨 Beautiful UI** - Modern, responsive design with dark mode support
+- **🔒 Secure & Private** - Custom expiration dates and private link management
+- **📱 Mobile Responsive** - Works seamlessly across all devices
+
+### 🎯 Advanced Features
+- **📈 Interactive Dashboard** - Monitor performance with beautiful charts and statistics
+- **🔐 Google Authentication** - Quick and secure login with NextAuth
+- **🌙 Dark Mode** - Eye-friendly dark theme with neon effects
+- **📋 Link Management** - Create, edit, and delete your short links
+- **🔄 Real-Time Updates** - Live analytics updates using Socket.io
+- **💾 Persistent Storage** - Redux Persist for seamless data management
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **[Next.js 16](https://nextjs.org/)** - React framework with App Router
+- **[React 19](https://reactjs.org/)** - UI library
+- **[Tailwind CSS 4](https://tailwindcss.com/)** - Utility-first CSS framework
+- **[Redux Toolkit](https://redux-toolkit.js.org/)** - State management
+- **[NextAuth.js](https://next-auth.js.org/)** - Authentication
+- **[Axios](https://axios-http.com/)** - HTTP client
+- **[Socket.io Client](https://socket.io/)** - Real-time updates
+
+### Key Libraries
+- `next-themes` - Theme switching
+- `react-redux` - React bindings for Redux
+- `redux-persist` - State persistence
+- `react-datepicker` - Date selection component
+
+---
+
+## 📦 Installation
+
+### Prerequisites
+- Node.js 18+ and npm/yarn/pnpm
+- Git
+
+### Setup Steps
+
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-url>
+   cd url-shortener-frontend
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   # or
+   yarn install
+   # or
+   pnpm install
+   ```
+
+3. **Set up environment variables**
+   
+   Create a `.env.local` file in the root directory:
+   ```env
+   NEXTAUTH_URL=http://localhost:3000
+   NEXTAUTH_SECRET=your-secret-key-here
+   
+   # Google OAuth (if using Google login)
+   GOOGLE_CLIENT_ID=your-google-client-id
+   GOOGLE_CLIENT_SECRET=your-google-client-secret
+   
+   # API Backend URL
+   NEXT_PUBLIC_API_URL=http://localhost:5000/api
+   ```
+
+4. **Run the development server**
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   # or
+   pnpm dev
+   ```
+
+5. **Open your browser**
+   
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+---
+
+## 🚀 Usage
+
+### Creating a Short Link
+
+1. **Sign in** with your Google account
+2. Click **"Create Link"** button on the dashboard
+3. Enter your long URL and optional custom slug
+4. Click **"Create"** to generate your short link
+5. Copy and share your short link!
+
+### Viewing Analytics
+
+1. Navigate to your **Dashboard**
+2. Click on any link card to view detailed analytics
+3. Monitor clicks, geographic data, and performance metrics
+4. View real-time updates in the analytics panel
+
+### Managing Links
+
+- **Edit**: Click the edit icon on any link card
+- **Delete**: Click the delete icon and confirm
+- **View Stats**: Click on a link to see detailed analytics
+
+---
+
+## 📁 Project Structure
+
+```
+url-shortener-frontend/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── [slug]/            # Dynamic route for shortened URLs
+│   │   ├── dashboard/         # Dashboard pages
+│   │   │   └── analytics/     # Analytics pages
+│   │   ├── api/               # API routes
+│   │   │   └── auth/         # NextAuth configuration
+│   │   ├── layout.js          # Root layout
+│   │   └── page.js            # Home page
+│   ├── components/            # React components
+│   │   ├── DashboardContent.js
+│   │   ├── LinkCard.js
+│   │   ├── LinkForm.js
+│   │   ├── AnalyticsPanel.js
+│   │   └── ...
+│   ├── lib/                   # Utility libraries
+│   │   ├── auth.js           # Auth configuration
+│   │   ├── axios.js          # API client
+│   │   └── storage.js        # Storage utilities
+│   └── store/                # Redux store
+│       ├── store.js
+│       ├── slices/
+│       └── hooks.js
+├── public/                    # Static assets
+├── .gitignore
+├── package.json
+└── README.md
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## 🎨 Screenshots
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Dashboard View
+![Dashboard](https://via.placeholder.com/800x500/6366f1/ffffff?text=Dashboard+View)
 
-## Learn More
+### Analytics Panel
+![Analytics](https://via.placeholder.com/800x500/8b5cf6/ffffff?text=Analytics+Panel)
 
-To learn more about Next.js, take a look at the following resources:
+### Dark Mode
+![Dark Mode](https://via.placeholder.com/800x500/1e1b4b/ffffff?text=Dark+Mode)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+> 💡 **Note**: Replace placeholder images with actual screenshots of your application
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🔧 Available Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+# Development
+npm run dev              # Start development server
+npm run dev:network      # Start dev server accessible on network
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Production
+npm run build            # Build for production
+npm run start           # Start production server
+npm run start:network    # Start production server on network
+
+# Code Quality
+npm run lint             # Run ESLint
+```
+
+---
+
+## 🌐 Deployment
+
+### Vercel (Recommended)
+
+1. Push your code to GitHub
+2. Import your repository on [Vercel](https://vercel.com)
+3. Add your environment variables
+4. Deploy!
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
+
+### Other Platforms
+
+This Next.js app can be deployed on any platform that supports Node.js:
+- **Netlify**
+- **Railway**
+- **Render**
+- **AWS Amplify**
+- **DigitalOcean App Platform**
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 📝 Environment Variables
+
+Make sure to set up the following environment variables:
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `NEXTAUTH_URL` | Your application URL | ✅ |
+| `NEXTAUTH_SECRET` | Secret for NextAuth | ✅ |
+| `GOOGLE_CLIENT_ID` | Google OAuth Client ID | ❌ |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret | ❌ |
+| `NEXT_PUBLIC_API_URL` | Backend API URL | ✅ |
+
+---
+
+## 🐛 Troubleshooting
+
+### Issue: Authentication not working
+- Check your `NEXTAUTH_SECRET` is set correctly
+- Verify Google OAuth credentials if using Google login
+
+### Issue: API calls failing
+- Ensure `NEXT_PUBLIC_API_URL` is set correctly
+- Check that your backend server is running
+
+### Issue: Build errors
+- Clear `.next` folder and `node_modules`
+- Run `npm install` again
+- Check Node.js version (requires 18+)
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- [Next.js](https://nextjs.org/) for the amazing framework
+- [Tailwind CSS](https://tailwindcss.com/) for the utility-first CSS
+- [Vercel](https://vercel.com/) for deployment platform
+- All the amazing open-source contributors
+
+---
+
+<div align="center">
+
+**Made with ❤️ using Next.js**
+
+[⭐ Star this repo](https://github.com/yourusername/url-shortener-frontend) • [🐛 Report Bug](https://github.com/yourusername/url-shortener-frontend/issues) • [💡 Request Feature](https://github.com/yourusername/url-shortener-frontend/issues)
+
+</div>
