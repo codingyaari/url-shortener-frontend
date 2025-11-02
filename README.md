@@ -158,6 +158,8 @@ url-shortener-frontend/
 │       ├── store.js
 │       ├── slices/
 │       └── hooks.js
+├── docs/                      # Documentation
+│   └── screenshots/          # Screenshot images
 ├── public/                    # Static assets
 ├── .gitignore
 ├── package.json
@@ -169,15 +171,67 @@ url-shortener-frontend/
 ## 🎨 Screenshots
 
 ### Dashboard View
-![Dashboard](https://via.placeholder.com/800x500/6366f1/ffffff?text=Dashboard+View)
+![Dashboard](./docs/screenshots/dashboard.png)
 
 ### Analytics Panel
-![Analytics](https://via.placeholder.com/800x500/8b5cf6/ffffff?text=Analytics+Panel)
+![Analytics](./docs/screenshots/analytics.png)
 
 ### Dark Mode
-![Dark Mode](https://via.placeholder.com/800x500/1e1b4b/ffffff?text=Dark+Mode)
+![Dark Mode](./docs/screenshots/dark-mode.png)
 
-> 💡 **Note**: Replace placeholder images with actual screenshots of your application
+### Home Page
+![Home Page](./docs/screenshots/home-page.png)
+
+---
+
+## 📸 How to Add Screenshots
+
+### Method 1: Store in Repository (Recommended)
+
+1. **Take screenshots** of your application:
+   - Dashboard view
+   - Analytics panel
+   - Dark mode view
+   - Home page
+
+2. **Save them** in the `docs/screenshots/` folder with these names:
+   - `dashboard.png` - Dashboard screenshot
+   - `analytics.png` - Analytics panel screenshot
+   - `dark-mode.png` - Dark mode screenshot
+   - `home-page.png` - Home page screenshot
+
+3. **Recommended screenshot tools:**
+   - **Mac**: `Cmd + Shift + 4` (select area) or `Cmd + Shift + 3` (full screen)
+   - **Windows**: `Windows + Shift + S` (Snipping Tool)
+   - **Linux**: Use `gnome-screenshot` or similar tools
+
+4. **Optimize images** (optional but recommended):
+   ```bash
+   # Install image optimization tools
+   npm install -g sharp-cli
+   
+   # Or use online tools like:
+   # - TinyPNG.com
+   # - Squoosh.app
+   ```
+
+### Method 2: Use GitHub Issues/PR Comments
+
+1. Drag and drop images into GitHub Issues or PR comments
+2. GitHub will provide a URL like: `https://user-images.githubusercontent.com/...`
+3. Copy the URL and use it in the README
+
+### Method 3: External Image Hosting
+
+Use services like:
+- [Imgur](https://imgur.com/) - Free image hosting
+- [Cloudinary](https://cloudinary.com/) - Image CDN
+- [GitHub Assets](https://github.com) - Upload to a GitHub repository
+
+Then use the URL in markdown:
+```markdown
+![Dashboard](https://your-image-url.com/dashboard.png)
+```
 
 ---
 
