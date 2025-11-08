@@ -11,6 +11,7 @@ import { OverviewStats } from './OverviewStats';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useToast } from './ToastContainer';
 import { fetchLinks, deleteLink } from '@/store/slices/linksSlice';
+import { ColorfulLights } from './ColorfulLights';
 
 export function DashboardContent() {
   const dispatch = useDispatch();
@@ -110,6 +111,7 @@ export function DashboardContent() {
 
   return (
     <div className="h-screen overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-950 dark:to-black dark:text-white transition-colors duration-500 flex flex-col">
+            <ColorfulLights />
       <Header />
       
       <main className="flex-1 overflow-hidden pt-16 sm:pt-20 pb-2">
