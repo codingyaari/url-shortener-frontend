@@ -58,6 +58,28 @@ export default function ShortUrlPage() {
           return;
         }
 
+        // Only allow safe http(s) redirects
+        let parsedDestination;
+        try {
+          parsedDestination = new URL(destinationUrl);
+        } catch {
+          setStatus('error');
+          setError('Invalid destination URL');
+          setTimeout(() => {
+            router.push('/');
+          }, 2000);
+          return;
+        }
+
+        if (!['http:', 'https:'].includes(parsedDestination.protocol)) {
+          setStatus('error');
+          setError('Invalid destination URL');
+          setTimeout(() => {
+            router.push('/');
+          }, 2000);
+          return;
+        }
+
         // Collect additional client-side data
         const clientData = collectClientData();
         
@@ -72,7 +94,7 @@ export default function ShortUrlPage() {
         
         // Redirect after a brief delay to show loading state
         setTimeout(() => {
-          window.location.href = destinationUrl;
+          window.location.href = parsedDestination.href;
         }, 500);
 
       } catch (err) {

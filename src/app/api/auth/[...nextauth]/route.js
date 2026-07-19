@@ -22,9 +22,6 @@ export const authOptions = {
       if (token.backendToken) {
         session.backendToken = token.backendToken;
       }
-      if (token.backendAuthError) {
-        session.backendAuthError = token.backendAuthError;
-      }
       session.user.id = token.userId || token.sub || token.id;
       
       return session;
@@ -58,12 +55,10 @@ export const authOptions = {
             token.userId = data.user.id;
             token.sub = data.user.id;
           } else {
-            token.backendAuthError = 'Backend authentication incomplete';
+            throw new Error('Backend authentication incomplete');
           }
         } catch (error) {
-          // Store error in token so we can check it in session
-          token.backendAuthError = error.message || 'Failed to authenticate with backend';
-          // Don't throw - allow NextAuth to succeed but frontend can check for backendAuthError
+          throw new Error(error.message || 'Failed to authenticate with backend');
         }
       }
 
@@ -84,7 +79,7 @@ export const authOptions = {
   pages: {
     signIn: '/',
   },
-  secret: process.env.NEXTAUTH_SECRET || 'development-secret-key-change-in-production',
+  secret: process.env.NEXTAUTH_SECRET,
 };
 
 const handler = NextAuth(authOptions);
