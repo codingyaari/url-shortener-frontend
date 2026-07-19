@@ -1,8 +1,6 @@
 import NextAuth from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001';
-
 export const authOptions = {
   providers: [
     GoogleProvider({
@@ -22,11 +20,16 @@ export const authOptions = {
       if (token.backendToken) {
         session.backendToken = token.backendToken;
       }
+      if (token.backendAuthError) {
+        session.backendAuthError = token.backendAuthError;
+      }
       session.user.id = token.userId || token.sub || token.id;
       
       return session;
     },
     async jwt({ token, account, profile, user }) {
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3001';
+
       // Initial sign in - when account exists, we have the Google token
       if (account?.provider === 'google' && account.id_token) {
         try {
@@ -43,7 +46,7 @@ export const authOptions = {
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Backend authentication failed');
+            throw new Error(errorData.message || `Backend authentication failed (${response.status})`);
           }
 
           const data = await response.json();
@@ -54,11 +57,19 @@ export const authOptions = {
             token.backendUser = data.user;
             token.userId = data.user.id;
             token.sub = data.user.id;
+            delete token.backendAuthError;
           } else {
-            throw new Error('Backend authentication incomplete');
+            token.backendAuthError = 'Backend authentication incomplete';
           }
         } catch (error) {
-          throw new Error(error.message || 'Failed to authenticate with backend');
+          // Do not throw — throwing aborts Google login with error=Callback.
+          // Keep NextAuth session; surface backend failure for the UI/API layer.
+          console.error('[auth] Backend Google auth failed:', {
+            apiBase,
+            message: error.message,
+            cause: error.cause?.message || error.cause,
+          });
+          token.backendAuthError = error.message || 'Failed to authenticate with backend';
         }
       }
 

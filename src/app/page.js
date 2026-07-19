@@ -13,6 +13,32 @@ export default function Home() {
   const { data: session } = useSession();
   const { theme, resolvedTheme } = useTheme();
 
+  // Log auth errors in the browser console (NextAuth callback errors only appear in the server terminal otherwise)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const authError = params.get('error');
+    if (!authError) return;
+
+    console.error('[auth] Google login failed:', {
+      error: authError,
+      callbackUrl: params.get('callbackUrl'),
+      hint:
+        authError === 'Callback'
+          ? 'OAuth callback failed — usually backend API unreachable or NEXT_PUBLIC_API_BASE is wrong. Check the terminal running npm run dev for [auth] logs.'
+          : 'See NextAuth error docs: https://next-auth.js.org/errors',
+    });
+  }, []);
+
+  // Surface backend auth problems after a "successful" Google login
+  useEffect(() => {
+    if (session?.backendAuthError) {
+      console.error('[auth] Logged in with Google, but backend JWT failed:', session.backendAuthError);
+    } else if (session?.backendToken) {
+      console.log('[auth] Login OK — backend token present');
+    }
+  }, [session]);
+
   // Ensure dark class is applied to html element
   useEffect(() => {
     if (typeof window === 'undefined') return;

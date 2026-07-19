@@ -5,7 +5,7 @@ import { LinkAnalyticsPage } from '@/components/LinkAnalyticsPage';
 export default async function AnalyticsPage({ params }) {
   const session = await getSession();
   
-  if (!session?.backendToken) {
+  if (!session) {
     redirect('/');
   }
 
