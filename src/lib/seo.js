@@ -28,11 +28,27 @@ export const SEO_KEYWORDS = [
 ];
 
 export function getSiteUrl() {
-  const fromEnv =
+  let fromEnv =
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.NEXTAUTH_URL ||
     'http://localhost:3000';
-  return fromEnv.replace(/\/$/, '');
+
+  fromEnv = String(fromEnv).trim().replace(/\/$/, '');
+
+  // Fix common misconfig: "https:/domain" or "http:/domain"
+  fromEnv = fromEnv.replace(/^(https?):\/(?!\/)/i, '$1://');
+
+  // Add https if protocol is missing (e.g. "shortener.codingyari.com")
+  if (!/^https?:\/\//i.test(fromEnv)) {
+    fromEnv = `https://${fromEnv.replace(/^\/+/, '')}`;
+  }
+
+  try {
+    const parsed = new URL(fromEnv);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return 'http://localhost:3000';
+  }
 }
 
 export function buildPageMetadata({
