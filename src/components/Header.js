@@ -1,134 +1,168 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { ThemeToggle } from './ThemeToggle';
-import { AnimatedThemeToggler } from './ui/animated-theme-toggler';
+import { Logo } from './Logo';
 
-export function Header() {
+export function Header({ solid = false }) {
   const { data: session, status } = useSession();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const user = session?.user;
+  const displayName = user?.name || user?.email || 'Account';
+  const initials = (user?.name || user?.email || 'U')
+    .split(' ')
+    .map((p) => p[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
+
+  const navLinks = [
+    { href: '/#features', label: 'Features' },
+    { href: '/pricing', label: 'Pricing' },
+    { href: '/#how', label: 'How it works' },
+  ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50">
-      {/* Glassmorphism Background with Gradient Border */}
-      <div className="absolute inset-0 bg-white/20 dark:bg-black/20 backdrop-blur-md border-b border-gray-200/30 dark:border-indigo-500/10">
-        {/* Animated gradient border effect */}
-        <div className="absolute inset-0 border-b border-transparent bg-gradient-to-r from-transparent via-indigo-500/20 dark:via-indigo-500/30 to-transparent opacity-0 dark:opacity-100 transition-opacity duration-500" />
-        {/* Subtle glow effect */}
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-400/50 dark:via-indigo-500/40 to-transparent" />
-      </div>
+    <header className={`fixed top-0 inset-x-0 z-50 ${solid ? 'border-b border-[var(--line)] bg-[var(--paper)]/90 backdrop-blur-md' : 'bg-[var(--paper)]/70 backdrop-blur-md'}`}>
+      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4">
+        <Logo href="/" onClick={() => setMenuOpen(false)} />
 
-      {/* Content */}
-      <nav className="relative container mx-auto px-2 sm:px-5 lg:px-6 py-2.5 sm:py-3 flex items-center justify-between">
-        {/* Logo Section */}
-        <Link 
-          href="/" 
-          className="group flex items-center gap-2 sm:gap-3 cursor-pointer min-w-0 flex-shrink"
-        >
-          {/* Logo Icon */}
-          <div className="relative flex-shrink-0">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-violet-500 to-pink-500 rounded-xl blur-md opacity-60 dark:opacity-40 group-hover:opacity-80 dark:group-hover:opacity-60 transition-opacity duration-300" />
-            <div className="relative w-9 h-9 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-indigo-600 via-violet-600 to-pink-500 rounded-xl flex items-center justify-center shadow-lg dark:shadow-[0_0_20px_rgba(129,140,248,0.5)] group-hover:scale-110 transition-transform duration-300">
-              <svg className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
-            </div>
-          </div>
-          
-          {/* Logo Text */}
-          <div className="flex flex-col min-w-0">
-            <span className="text-base sm:text-lg lg:text-xl font-bold bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-600 dark:from-indigo-400 dark:via-blue-400 dark:to-cyan-400 bg-clip-text text-transparent dark:drop-shadow-[0_0_15px_rgba(59,130,246,0.8)] group-hover:scale-105 transition-transform duration-300 truncate">
-              URL Shortener
-            </span>
-            <span className="text-[9px] sm:text-[10px] lg:text-xs text-gray-500 dark:text-gray-400 font-medium hidden sm:block">
-              Short. Track. Analyze.
-            </span>
-          </div>
-        </Link>
-        
-        {/* Right Side - Actions */}
-        <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 flex-shrink-0">
-          {/* Theme Toggle */}
-          <AnimatedThemeToggler />
-          {/* <ThemeToggle /> */}
-          
-          {/* Auth Section */}
+        <div className="hidden items-center gap-8 md:flex">
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-sm font-600 text-[var(--muted)] hover:text-[var(--ink)]"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1.5 sm:gap-3">
+          <ThemeToggle />
           {status === 'loading' ? (
-            <div className="w-8 h-8 border-2 border-indigo-500 dark:border-blue-400 border-t-transparent rounded-full animate-spin" />
+            <div className="h-9 w-20 animate-pulse rounded-full bg-[var(--line)] sm:w-28" />
           ) : session ? (
-            <div className="flex items-center gap-3 sm:gap-4">
-              {/* User Profile with Dropdown Style */}
-              <Link 
-                href="/dashboard" 
-                className="group flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl bg-white/60 dark:bg-black/40 backdrop-blur-lg border border-gray-200/50 dark:border-indigo-500/30 hover:border-indigo-400 dark:hover:border-indigo-400/50 hover:bg-white/80 dark:hover:bg-black/60 hover:shadow-lg dark:hover:shadow-[0_0_20px_rgba(129,140,248,0.4)] transition-all duration-300 cursor-pointer"
+            <>
+              <Link
+                href="/dashboard"
+                className="btn-secondary !hidden !px-3 !py-2 text-sm sm:!inline-flex"
               >
-                {/* Avatar */}
-                <div className="relative flex-shrink-0">
-                  {session.user?.image ? (
-                    <>
-                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-full blur-md opacity-50 dark:opacity-30 group-hover:opacity-70 dark:group-hover:opacity-50 transition-opacity duration-300" />
-                      <img
-                        src={session.user.image}
-                        alt={session.user?.name || 'User'}
-                        width={40}
-                        height={40}
-                        className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-white dark:border-indigo-500/50 shadow-md group-hover:scale-110 transition-transform duration-300"
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-full blur-md opacity-50 dark:opacity-30 group-hover:opacity-70 dark:group-hover:opacity-50 transition-opacity duration-300" />
-                      <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-indigo-500 via-violet-500 to-pink-500 flex items-center justify-center text-white text-xs sm:text-sm font-bold border-2 border-white dark:border-indigo-500/50 shadow-md group-hover:scale-110 transition-transform duration-300">
-                        {session.user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                      </div>
-                    </>
+                Dashboard
+              </Link>
+              <div className="flex max-w-[42vw] items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--paper-elevated)] py-1 pl-1 pr-2 sm:max-w-none sm:pr-3">
+                {user?.image || user?.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user.image || user.avatar}
+                    alt={displayName}
+                    className="h-7 w-7 shrink-0 rounded-full object-cover sm:h-8 sm:w-8"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[10px] font-700 text-[var(--paper)] sm:h-8 sm:w-8 sm:text-[11px]">
+                    {initials}
+                  </span>
+                )}
+                <div className="hidden min-w-0 max-w-[140px] sm:block">
+                  <p className="truncate text-xs font-700 leading-tight">{displayName}</p>
+                  {user?.email && (
+                    <p className="truncate text-[10px] leading-tight text-[var(--muted)]">{user.email}</p>
                   )}
                 </div>
-                
-                {/* User Name - Hidden on mobile */}
-                <div className="hidden sm:flex flex-col items-start">
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {session.user?.name?.split(' ')[0] || 'User'}
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    Dashboard
-                  </span>
-                </div>
-              </Link>
-
-              {/* Sign Out Button */}
+              </div>
               <button
-                onClick={() => signOut()}
-                className="group relative px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-600 dark:from-indigo-500 dark:via-violet-500 dark:to-pink-500 text-white font-semibold text-xs sm:text-sm hover:scale-105 hover:shadow-xl dark:shadow-[0_0_30px_rgba(129,140,248,0.7),0_0_60px_rgba(167,139,250,0.5)] dark:hover:shadow-[0_0_50px_rgba(129,140,248,1),0_0_100px_rgba(167,139,250,0.9)] transition-all duration-300 overflow-hidden cursor-pointer"
+                type="button"
+                onClick={() => signOut({ callbackUrl: '/' })}
+                className="btn-primary !hidden !px-3 !py-2 text-sm sm:!inline-flex"
               >
-                {/* Shine effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                <span className="relative flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
-                  <span className="hidden sm:inline">Sign Out</span>
-                </span>
+                Sign out
               </button>
-            </div>
+            </>
           ) : (
             <button
+              type="button"
               onClick={() => signIn('google', { callbackUrl: '/dashboard', redirect: true })}
-              className="group relative px-2.5 sm:px-3 lg:px-5 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-600 dark:from-indigo-500 dark:via-violet-500 dark:to-pink-500 text-white font-semibold text-xs sm:text-sm hover:scale-105 hover:shadow-xl dark:shadow-[0_0_30px_rgba(129,140,248,0.7),0_0_60px_rgba(167,139,250,0.5)] dark:hover:shadow-[0_0_50px_rgba(129,140,248,1),0_0_100px_rgba(167,139,250,0.9)] transition-all duration-300 overflow-hidden cursor-pointer"
+              className="btn-primary !px-3 !py-2 text-sm"
             >
-              {/* Shine effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-              <span className="relative flex items-center gap-1.5 sm:gap-2">
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                </svg>
-                <span>Sign In</span>
-              </span>
+              <span className="sm:hidden">Start</span>
+              <span className="hidden sm:inline">Get started</span>
             </button>
           )}
+
+          <button
+            type="button"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--paper-elevated)] md:hidden"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            {menuOpen ? (
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            ) : (
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            )}
+          </button>
         </div>
       </nav>
+
+      {menuOpen && (
+        <div className="border-t border-[var(--line)] bg-[var(--paper)] md:hidden">
+          <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3 sm:px-6">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="rounded-xl px-3 py-3 text-sm font-700 text-[var(--ink)] hover:bg-[var(--line)]/40"
+                onClick={() => setMenuOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
+            {session && (
+              <>
+                <Link
+                  href="/dashboard"
+                  className="rounded-xl px-3 py-3 text-sm font-700 text-[var(--ink)] hover:bg-[var(--line)]/40"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <button
+                  type="button"
+                  className="mt-1 rounded-xl px-3 py-3 text-left text-sm font-700 text-[var(--danger)] hover:bg-[var(--line)]/40"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    signOut({ callbackUrl: '/' });
+                  }}
+                >
+                  Sign out
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }
-

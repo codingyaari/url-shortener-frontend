@@ -5,7 +5,7 @@ import { DashboardContent } from '@/components/DashboardContent';
 export default async function DashboardPage() {
   const session = await getSession();
   
-  if (!session) {
+  if (!session?.backendToken) {
     redirect('/');
   }
 

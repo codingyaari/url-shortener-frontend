@@ -1,56 +1,71 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { createLink, updateLink } from '@/store/slices/linksSlice';
+import { QrPanel } from '@/components/QrPanel';
+
+const emptyForm = {
+  destinationUrl: '',
+  customSlug: '',
+  title: '',
+  notes: '',
+  tags: '',
+  password: '',
+  clearPassword: false,
+  expiry: null,
+  isActive: true,
+  isFavorite: false,
+  showOnBio: true,
+  utmSource: '',
+  utmMedium: '',
+  utmCampaign: '',
+};
 
 export function LinkModal({ isOpen, onClose, onSuccess, editLink = null }) {
   const dispatch = useDispatch();
-  const [formData, setFormData] = useState({
-    destinationUrl: '',
-    customSlug: '',
-    title: '',
-    expiry: null,
-  });
+  const [formData, setFormData] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
+  const [createdSlug, setCreatedSlug] = useState(null);
 
   useEffect(() => {
-    if (isOpen && editLink) {
-      // Parse expiry date if it exists
-      let expiryDate = null;
-      if (editLink.expiry) {
-        try {
-          const date = new Date(editLink.expiry);
-          if (!isNaN(date.getTime())) {
-            expiryDate = date;
-          }
-        } catch (e) {
-          // Invalid date, leave null
-        }
-      }
-      
+    if (!isOpen) return;
+    if (editLink) {
       setFormData({
-        destinationUrl: editLink.destinationUrl || editLink.destination || '',
+        destinationUrl: editLink.destinationUrl || '',
         customSlug: editLink.slug || '',
         title: editLink.title || '',
-        expiry: expiryDate,
+        notes: editLink.notes || '',
+        tags: Array.isArray(editLink.tags) ? editLink.tags.join(', ') : '',
+        password: '',
+        clearPassword: false,
+        expiry: editLink.expiry ? new Date(editLink.expiry) : null,
+        isActive: editLink.isActive !== false,
+        isFavorite: Boolean(editLink.isFavorite),
+        showOnBio: editLink.showOnBio !== false,
+        utmSource: editLink.utmSource || '',
+        utmMedium: editLink.utmMedium || '',
+        utmCampaign: editLink.utmCampaign || '',
       });
-    } else if (isOpen && !editLink) {
-      // Reset form for new link
-      setFormData({
-        destinationUrl: '',
-        customSlug: '',
-        title: '',
-        expiry: null,
-      });
+      setCreatedSlug(editLink.slug || null);
+    } else {
+      setFormData(emptyForm);
+      setCreatedSlug(null);
     }
     setError(null);
-    setSuccess(null);
   }, [isOpen, editLink]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -58,226 +73,297 @@ export function LinkModal({ isOpen, onClose, onSuccess, editLink = null }) {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setSuccess(null);
 
     try {
-      // Validate slug - no spaces allowed
       if (formData.customSlug && /\s/.test(formData.customSlug)) {
-        throw new Error('Slug cannot contain spaces. Please remove all spaces.');
+        throw new Error('Slug cannot contain spaces');
       }
 
-      // Format expiry date if selected
-      let expiryDate = null;
-      if (formData.expiry) {
-        // Set to end of day in UTC
-        const date = new Date(formData.expiry);
-        date.setHours(23, 59, 59, 999);
-        expiryDate = date.toISOString();
-      }
+      const tags = formData.tags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean);
 
-      // Prepare link data for API
       const linkData = {
         destinationUrl: formData.destinationUrl,
         slug: formData.customSlug || undefined,
         title: formData.title || undefined,
-        expiry: expiryDate || undefined,
+        notes: formData.notes || '',
+        tags,
+        isActive: formData.isActive,
+        isFavorite: formData.isFavorite,
+        showOnBio: formData.showOnBio,
+        utmSource: formData.utmSource || '',
+        utmMedium: formData.utmMedium || '',
+        utmCampaign: formData.utmCampaign || '',
+        expiry: formData.expiry
+          ? (() => {
+              const d = new Date(formData.expiry);
+              d.setHours(23, 59, 59, 999);
+              return d.toISOString();
+            })()
+          : null,
       };
 
-      let result;
-      if (editLink) {
-        // Update existing link
-        result = await dispatch(updateLink({ id: editLink?._id, ...linkData }));
-      } else {
-        // Create new link
-        result = await dispatch(createLink(linkData));
-      }
+      if (formData.clearPassword) linkData.clearPassword = true;
+      if (formData.password) linkData.password = formData.password;
 
-      // Check if the action was successful
+      const result = editLink
+        ? await dispatch(updateLink({ id: editLink._id || editLink.id, ...linkData }))
+        : await dispatch(createLink(linkData));
+
       if (createLink.fulfilled.match(result) || updateLink.fulfilled.match(result)) {
-        setSuccess(editLink ? 'Link updated successfully!' : 'Link created successfully!');
-        
-        // Trigger refresh callback
-        if (onSuccess) {
-          onSuccess();
-        }
-
-        // Close modal after short delay
-        setTimeout(() => {
-          onClose();
-        }, 100);
-
-          // Reset form
-          setFormData({
-            destinationUrl: '',
-            customSlug: '',
-            title: '',
-            expiry: null,
-          });
-          
-      } else if (createLink.rejected.match(result) || updateLink.rejected.match(result)) {
-        // Handle error from Redux action
-        // result.payload is the error message string
-        const errorMessage = result.payload || 'An error occurred';
-        console.log('errorMessage::::', errorMessage);
-        setError(errorMessage);
+        onSuccess?.();
+        onClose();
+      } else {
+        throw new Error(result.payload || 'Something went wrong');
       }
     } catch (err) {
-      setError(err.message || 'An error occurred');
+      setError(err.message || 'Failed to save link');
     } finally {
       setLoading(false);
     }
   };
 
+  const previewSlug = createdSlug || editLink?.slug || formData.customSlug;
+
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm" />
-      
-      {/* Modal */}
-      <div className="relative w-full max-w-2xl bg-white/95 dark:bg-black/90 backdrop-blur-xl rounded-2xl shadow-2xl border-2 border-indigo-500/30 dark:border-indigo-400/70 dark:shadow-[0_0_60px_rgba(129,140,248,0.6),0_0_120px_rgba(167,139,250,0.4)] max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-white/95 dark:bg-black/90 backdrop-blur-xl border-b-2 border-indigo-500/20 dark:border-indigo-400/50 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {editLink ? 'Edit Link' : 'Create Short Link'}
-          </h2>
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[rgba(11,18,32,0.55)] sm:items-center sm:p-4">
+      <div
+        className="flex h-[100dvh] w-full max-w-3xl flex-col overflow-hidden bg-[var(--paper-elevated)] shadow-[var(--shadow-soft)] sm:h-auto sm:max-h-[90dvh] sm:rounded-[var(--radius)] sm:border sm:border-[var(--line)]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="link-modal-title"
+      >
+        {/* Fixed header */}
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--line)] px-4 py-3 sm:px-6 sm:py-4">
+          <div className="min-w-0">
+            <h2 id="link-modal-title" className="font-display text-xl font-700 sm:text-2xl">
+              {editLink ? 'Edit link' : 'Create short link'}
+            </h2>
+            <p className="mt-0.5 text-sm text-[var(--muted)]">Brand it, protect it, track every click.</p>
+          </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white cursor-pointer"
-            aria-label="Close"
+            className="btn-secondary shrink-0 !px-3 !py-2 text-sm"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            Close
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Destination URL */}
-          <div>
-            <label htmlFor="destinationUrl" className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-200">
-              Destination URL <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="url"
-              id="destinationUrl"
-              required
-              value={formData.destinationUrl}
-              onChange={(e) => setFormData({ ...formData, destinationUrl: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl bg-white/80 dark:bg-black/60 backdrop-blur-lg border-2 border-indigo-500/20 dark:border-indigo-400/60 dark:shadow-[0_0_15px_rgba(129,140,248,0.3)] focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 dark:text-white dark:focus:shadow-[0_0_25px_rgba(129,140,248,0.8)] transition-all"
-              placeholder="https://example.com/very/long/url"
-            />
+        {/* Scrollable body only */}
+        <form id="link-modal-form" onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+            <div className="grid gap-5 md:grid-cols-[1.15fr_0.85fr]">
+              <div className="space-y-4">
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-700 uppercase tracking-[0.12em] text-[var(--muted)]">
+                    Destination URL
+                  </span>
+                  <input
+                    required
+                    className="input-field"
+                    placeholder="https://example.com/your-page"
+                    value={formData.destinationUrl}
+                    onChange={(e) => setFormData((s) => ({ ...s, destinationUrl: e.target.value }))}
+                  />
+                </label>
+
+                <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-700 uppercase tracking-[0.12em] text-[var(--muted)]">Title</span>
+                    <input
+                      className="input-field"
+                      placeholder="Summer launch"
+                      value={formData.title}
+                      onChange={(e) => setFormData((s) => ({ ...s, title: e.target.value }))}
+                    />
+                  </label>
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-700 uppercase tracking-[0.12em] text-[var(--muted)]">Custom slug</span>
+                    <input
+                      className="input-field"
+                      placeholder="summer-drop"
+                      value={formData.customSlug}
+                      onChange={(e) => setFormData((s) => ({ ...s, customSlug: e.target.value }))}
+                    />
+                  </label>
+                </div>
+
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-700 uppercase tracking-[0.12em] text-[var(--muted)]">Tags</span>
+                  <input
+                    className="input-field"
+                    placeholder="instagram, launch, q3"
+                    value={formData.tags}
+                    onChange={(e) => setFormData((s) => ({ ...s, tags: e.target.value }))}
+                  />
+                  <p className="text-xs text-[var(--muted)]">For filtering in your dashboard — not shown to visitors.</p>
+                </label>
+
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-700 uppercase tracking-[0.12em] text-[var(--muted)]">Private notes</span>
+                  <textarea
+                    className="input-field min-h-[72px] resize-y"
+                    placeholder="Internal reminder for you"
+                    value={formData.notes}
+                    onChange={(e) => setFormData((s) => ({ ...s, notes: e.target.value }))}
+                  />
+                </label>
+
+                <div className="rounded-2xl border border-[var(--line)] p-3 sm:p-4">
+                  <p className="text-xs font-700 uppercase tracking-[0.12em] text-[var(--muted)]">UTM tracking</p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">Appended on redirect for GA / Ads tracking.</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <label className="block space-y-1.5">
+                      <span className="text-[11px] font-700 text-[var(--muted)]">utm_source</span>
+                      <input
+                        className="input-field"
+                        placeholder="instagram"
+                        value={formData.utmSource}
+                        onChange={(e) => setFormData((s) => ({ ...s, utmSource: e.target.value }))}
+                      />
+                    </label>
+                    <label className="block space-y-1.5">
+                      <span className="text-[11px] font-700 text-[var(--muted)]">utm_medium</span>
+                      <input
+                        className="input-field"
+                        placeholder="social"
+                        value={formData.utmMedium}
+                        onChange={(e) => setFormData((s) => ({ ...s, utmMedium: e.target.value }))}
+                      />
+                    </label>
+                    <label className="block space-y-1.5">
+                      <span className="text-[11px] font-700 text-[var(--muted)]">utm_campaign</span>
+                      <input
+                        className="input-field"
+                        placeholder="summer-drop"
+                        value={formData.utmCampaign}
+                        onChange={(e) => setFormData((s) => ({ ...s, utmCampaign: e.target.value }))}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-700 uppercase tracking-[0.12em] text-[var(--muted)]">
+                      Password {editLink?.hasPassword ? '(set)' : ''}
+                    </span>
+                    <input
+                      type="password"
+                      className="input-field"
+                      placeholder={editLink?.hasPassword ? 'Leave blank to keep' : 'Optional'}
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData((s) => ({ ...s, password: e.target.value, clearPassword: false }))
+                      }
+                    />
+                    {editLink?.hasPassword && (
+                      <label className="mt-2 flex items-center gap-2 text-sm text-[var(--muted)]">
+                        <input
+                          type="checkbox"
+                          checked={formData.clearPassword}
+                          onChange={(e) =>
+                            setFormData((s) => ({
+                              ...s,
+                              clearPassword: e.target.checked,
+                              password: '',
+                            }))
+                          }
+                        />
+                        Remove password
+                      </label>
+                    )}
+                  </label>
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-700 uppercase tracking-[0.12em] text-[var(--muted)]">Expiry</span>
+                    <DatePicker
+                      selected={formData.expiry}
+                      onChange={(date) => setFormData((s) => ({ ...s, expiry: date }))}
+                      className="input-field"
+                      placeholderText="No expiry"
+                      minDate={new Date()}
+                      isClearable
+                    />
+                  </label>
+                </div>
+
+                <div className="flex flex-col gap-2.5 rounded-2xl border border-[var(--line)] p-3 text-sm font-600 sm:p-4">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.isActive}
+                      onChange={(e) => setFormData((s) => ({ ...s, isActive: e.target.checked }))}
+                    />
+                    Link is active
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.isFavorite}
+                      onChange={(e) => setFormData((s) => ({ ...s, isFavorite: e.target.checked }))}
+                    />
+                    Favorite (pin on bio)
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.showOnBio}
+                      onChange={(e) => setFormData((s) => ({ ...s, showOnBio: e.target.checked }))}
+                    />
+                    Show on public bio page
+                  </label>
+                </div>
+
+                {error && (
+                  <p className="rounded-xl border border-[var(--danger)]/30 bg-[rgba(214,69,69,0.08)] px-3 py-2 text-sm text-[var(--danger)]">
+                    {error}
+                  </p>
+                )}
+              </div>
+
+              <div className="hidden md:block">
+                <div className="sticky top-0 space-y-3">
+                  {previewSlug ? (
+                    <QrPanel slug={previewSlug} title={formData.title} />
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-[var(--line)] p-6 text-center text-sm text-[var(--muted)]">
+                      QR appears after you save, or when you set a custom slug.
+                    </div>
+                  )}
+                  <div className="rounded-2xl border border-dashed border-[var(--line)] p-4 text-sm text-[var(--muted)]">
+                    Tip: memorable slugs like{' '}
+                    <span className="font-700 text-[var(--ink)]">/offer</span> get more clicks.
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Two Column Layout */}
-          <div className="grid md:grid-cols-2 gap-5">
-            {/* Custom Slug */}
-            <div>
-              <label htmlFor="customSlug" className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-                Custom Slug (optional)
-              </label>
-              <input
-                type="text"
-                id="customSlug"
-                value={formData.customSlug}
-                onChange={(e) => {
-                  // Remove spaces and trim
-                  const value = e.target.value.replace(/\s/g, '');
-                  setFormData({ ...formData, customSlug: value });
-                }}
-                className="w-full px-4 py-3 rounded-xl bg-white/80 dark:bg-black/60 backdrop-blur-lg border-2 border-indigo-500/20 dark:border-indigo-400/60 dark:shadow-[0_0_15px_rgba(129,140,248,0.3)] focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 dark:text-white dark:focus:shadow-[0_0_25px_rgba(129,140,248,0.8)] transition-all"
-                placeholder="my-custom-link"
-                pattern="[a-zA-Z0-9-_]+"
-                title="Spaces are not allowed. Only alphanumeric characters, hyphens, and underscores allowed"
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Leave empty for auto-generated. Spaces are not allowed.
-              </p>
+          {/* Fixed footer */}
+          <div className="shrink-0 border-t border-[var(--line)] bg-[var(--paper-elevated)] px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-4">
+            <div className="flex gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-secondary flex-1 sm:flex-none sm:!px-5"
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary flex-[2] disabled:opacity-60 sm:flex-1"
+              >
+                {loading ? 'Saving…' : editLink ? 'Save changes' : 'Create short link'}
+              </button>
             </div>
-
-            {/* Title */}
-            <div>
-              <label htmlFor="title" className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-                Title (optional)
-              </label>
-              <input
-                type="text"
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl bg-white/80 dark:bg-black/60 backdrop-blur-lg border-2 border-indigo-500/20 dark:border-indigo-400/60 dark:shadow-[0_0_15px_rgba(129,140,248,0.3)] focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 dark:text-white dark:focus:shadow-[0_0_25px_rgba(129,140,248,0.8)] transition-all"
-                placeholder="My Awesome Link"
-              />
-            </div>
-          </div>
-
-          {/* Expiry Date */}
-          <div>
-            <label htmlFor="expiry" className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-              Expiry Date <span className="text-gray-400 font-normal">(optional)</span>
-            </label>
-            <DatePicker
-              selected={formData.expiry}
-              onChange={(date) => setFormData({ ...formData, expiry: date })}
-              minDate={new Date()}
-              dateFormat="MMMM d, yyyy"
-              isClearable
-              placeholderText="Select expiry date (optional)"
-              showPopperArrow={false}
-              className="w-full px-4 py-3 rounded-xl bg-white/80 dark:bg-black/60 backdrop-blur-lg border-2 border-indigo-500/20 dark:border-indigo-400/60 dark:shadow-[0_0_15px_rgba(129,140,248,0.3)] focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 dark:text-white dark:focus:shadow-[0_0_25px_rgba(129,140,248,0.8)] transition-all"
-              wrapperClassName="w-full"
-            />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Leave empty for links that never expire. Past dates cannot be selected.
-            </p>
-          </div>
-
-          {/* Error/Success Messages */}
-          {error && (
-            <div className="p-4 rounded-xl bg-red-500/10 border-2 border-red-500/30 text-red-600 dark:text-red-400">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="p-4 rounded-xl bg-green-500/10 border-2 border-green-500/30 text-green-600 dark:text-green-400">
-              {success}
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-6 py-3 rounded-xl bg-white/70 dark:bg-black/50 backdrop-blur-lg border-2 border-indigo-500/20 dark:border-indigo-400/70 text-gray-900 dark:text-white font-semibold hover:scale-105 hover:shadow-lg transition-all duration-300 cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-500 dark:via-violet-500 dark:to-pink-500 text-white font-semibold hover:scale-105 hover:shadow-lg dark:shadow-[0_0_30px_rgba(129,140,248,0.7),0_0_60px_rgba(167,139,250,0.5)] dark:hover:shadow-[0_0_50px_rgba(129,140,248,1),0_0_100px_rgba(167,139,250,0.9),0_0_150px_rgba(236,72,153,0.7)] dark:border-2 dark:border-indigo-400/60 transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  {editLink ? 'Updating...' : 'Creating...'}
-                </span>
-              ) : (
-                editLink ? 'Update Link' : 'Create Link'
-              )}
-            </button>
           </div>
         </form>
       </div>
     </div>
   );
 }
-
-

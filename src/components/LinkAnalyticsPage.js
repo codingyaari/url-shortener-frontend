@@ -1,111 +1,178 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from './Header';
 import api from '@/lib/axios';
+import { getShortUrl } from '@/lib/urls';
+import { useToast } from './ToastContainer';
+
+const RANGES = [
+  { id: '7d', label: '7 days' },
+  { id: '30d', label: '30 days' },
+  { id: '90d', label: '90 days' },
+  { id: 'all', label: 'All time' },
+];
+
+function StatCard({ label, value, hint }) {
+  return (
+    <div className="surface p-5">
+      <p className="text-xs font-700 uppercase tracking-[0.12em] text-[var(--muted)]">{label}</p>
+      <p className="mt-2 font-display text-3xl font-800 tracking-tight">{value}</p>
+      {hint ? <p className="mt-1 text-xs text-[var(--muted)]">{hint}</p> : null}
+    </div>
+  );
+}
+
+function RankList({ title, items, nameKey = 'name', empty = 'No data yet' }) {
+  const max = items.length ? Math.max(...items.map((i) => i.count)) : 1;
+  return (
+    <div className="surface p-5">
+      <h3 className="font-display text-lg font-700">{title}</h3>
+      <div className="mt-4 space-y-3">
+        {items.length === 0 && <p className="text-sm text-[var(--muted)]">{empty}</p>}
+        {items.map((item) => (
+          <div key={item[nameKey]}>
+            <div className="mb-1 flex items-center justify-between gap-3 text-sm">
+              <span className="truncate font-600">{item[nameKey]}</span>
+              <span className="shrink-0 font-700 text-[var(--signal)]">{item.count}</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--line)]">
+              <div
+                className="h-full rounded-full bg-[var(--ink)]"
+                style={{ width: `${Math.max(8, (item.count / max) * 100)}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function LinkAnalyticsPage({ slug }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [link, setLink] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [range, setRange] = useState('30d');
 
   useEffect(() => {
-    const fetchLinkAndAnalytics = async () => {
+    const load = async () => {
       if (!slug) {
         setLoading(false);
         setError('No slug provided');
         return;
       }
-
       try {
         setLoading(true);
         setError(null);
-        
-        // Fetch link and analytics in one API call
-        const response = await api.get(`/api/links/analytics/${slug}`);
-        
+        const response = await api.get(`/api/links/analytics/${slug}?range=${range}`);
         if (response.data?.success && response.data?.data) {
           setLink(response.data.data.link);
           setAnalytics(response.data.data.analytics);
         } else {
           setError(response.data?.message || 'Failed to load analytics');
-          setLink(null);
-          setAnalytics(null);
         }
       } catch (err) {
-        console.error('Error fetching link analytics:', err);
-        setError(err.response?.data?.message || 'Failed to load analytics');
-        setLink(null);
-        setAnalytics(null);
+        setError(err.response?.data?.message || err.message || 'Failed to load analytics');
       } finally {
         setLoading(false);
       }
     };
+    load();
+  }, [slug, range]);
 
-    fetchLinkAndAnalytics();
-  }, [slug]);
+  const shortUrl = link ? getShortUrl(link.slug) : '';
 
-  const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+  const countries = useMemo(() => {
+    if (analytics?.topCountries?.length) {
+      return analytics.topCountries.map((c) => ({ name: c.country, count: c.count }));
+    }
+    return Object.entries(analytics?.clicksByCountry || {})
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [analytics]);
+
+  const devices = useMemo(
+    () => Object.entries(analytics?.clicksByDevice || {}).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
+    [analytics]
+  );
+  const browsers = useMemo(
+    () => Object.entries(analytics?.clicksByBrowser || {}).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
+    [analytics]
+  );
+  const osList = useMemo(
+    () => Object.entries(analytics?.clicksByOS || {}).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
+    [analytics]
+  );
+  const referrers = useMemo(() => {
+    if (analytics?.topReferrers?.length) {
+      return analytics.topReferrers.map((r) => ({ name: r.referrer, count: r.count }));
+    }
+    return Object.entries(analytics?.clicksByReferrer || {})
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [analytics]);
+  const languages = useMemo(() => {
+    if (analytics?.topLanguages?.length) {
+      return analytics.topLanguages.map((l) => ({ name: l.language, count: l.count }));
+    }
+    return Object.entries(analytics?.clicksByLanguage || {})
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [analytics]);
+  const utmSources = useMemo(
+    () => Object.entries(analytics?.clicksByUTMSource || {}).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count),
+    [analytics]
+  );
+
+  const timeline = analytics?.clicksOverTime || [];
+  const maxTimeline = timeline.length ? Math.max(...timeline.map((t) => t.count), 1) : 1;
+  const hasLocalTraffic = (analytics?.recentClicks || []).some(
+    (c) => c.ip === 'Localhost' || c.country === 'Local network' || String(c.referrer || '').includes('localhost')
+  );
+
+  const exportCsv = () => {
+    const rows = [['Time', 'IP', 'Country', 'City', 'Device', 'Browser', 'OS', 'Referrer', 'Language', 'UTM']];
+    (analytics?.recentClicks || []).forEach((c) => {
+      rows.push([
+        new Date(c.timestamp).toISOString(),
+        c.ip,
+        c.country,
+        c.city,
+        c.device,
+        c.browser,
+        c.os,
+        c.referrer,
+        c.language,
+        c.utmSource || '',
+      ]);
     });
+    const csv = rows.map((r) => r.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${slug}-analytics-${range}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('CSV exported', 'success');
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    });
+  const copyLink = async () => {
+    await navigator.clipboard.writeText(shortUrl);
+    showToast('Short link copied', 'success');
   };
-
-  const topCountries = useMemo(() => {
-    if (!analytics) return [];
-    return Object.entries(analytics.clicksByCountry)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10);
-  }, [analytics]);
-
-  const devices = useMemo(() => {
-    return analytics ? Object.entries(analytics.clicksByDevice) : [];
-  }, [analytics]);
-
-  const browsers = useMemo(() => {
-    return analytics ? Object.entries(analytics.clicksByBrowser) : [];
-  }, [analytics]);
-
-  const osList = useMemo(() => {
-    return analytics ? Object.entries(analytics.clicksByOS) : [];
-  }, [analytics]);
-
-  const maxCountryCount = useMemo(() => {
-    return topCountries.length > 0 ? Math.max(...topCountries.map(item => item[1])) : 1;
-  }, [topCountries]);
-
-  const maxDeviceCount = useMemo(() => {
-    return devices.length > 0 ? Math.max(...devices.map(item => item[1])) : 1;
-  }, [devices]);
-
-  const maxTimeCount = useMemo(() => {
-    if (!analytics?.clicksOverTime?.length) return 1;
-    return Math.max(...analytics.clicksOverTime.map(item => item.count));
-  }, [analytics]);
-
-  const shortUrl = link?.shortUrl || (typeof window !== 'undefined' ? `${window.location.origin}/${link?.slug}` : '');
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-950 dark:to-black dark:text-white transition-colors duration-500">
-        <Header />
-        <main className="pt-20 pb-16">
-          <div className="container mx-auto px-4 py-8">
-            <div className="flex items-center justify-center py-20">
-              <div className="w-8 h-8 border-2 border-indigo-500 dark:border-blue-400 border-t-transparent rounded-full animate-spin" />
-            </div>
-          </div>
+      <div className="min-h-screen bg-[var(--paper)]">
+        <Header solid />
+        <main className="mx-auto max-w-6xl px-4 pb-16 pt-28 sm:px-6">
+          <div className="surface p-12 text-center text-[var(--muted)]">Loading analytics…</div>
         </main>
       </div>
     );
@@ -113,280 +180,178 @@ export function LinkAnalyticsPage({ slug }) {
 
   if (error || !link) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-950 dark:to-black dark:text-white transition-colors duration-500">
-        <Header />
-        <main className="pt-20 pb-16">
-          <div className="container mx-auto px-4 py-8">
-            <div className="text-center py-12">
-              <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
-                {error || 'Link Not Found'}
-              </h2>
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-blue-500 dark:via-blue-600 dark:to-indigo-500 text-white font-semibold hover:scale-105 hover:shadow-lg dark:shadow-[0_0_30px_rgba(59,130,246,0.7),0_0_60px_rgba(37,99,235,0.5)] transition-all duration-300 cursor-pointer"
-              >
-                Back to Dashboard
-              </button>
-            </div>
+      <div className="min-h-screen bg-[var(--paper)]">
+        <Header solid />
+        <main className="mx-auto max-w-6xl px-4 pb-16 pt-28 sm:px-6">
+          <div className="surface p-10 text-center">
+            <h1 className="font-display text-2xl font-700">{error || 'Link not found'}</h1>
+            <button className="btn-primary mt-6" onClick={() => router.push('/dashboard')}>Back to dashboard</button>
           </div>
         </main>
       </div>
     );
   }
 
-  const defaultAnalytics = {
-    totalClicks: 0,
-    clicksByCountry: {},
-    clicksByDevice: {},
-    clicksByBrowser: {},
-    clicksByOS: {},
-    clicksOverTime: [],
-    recentClicks: [],
-  };
-
-  const analyticsData = analytics || defaultAnalytics;
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-950 dark:to-black dark:text-white transition-colors duration-500">
-      <Header />
-      
-      <main className="pt-20 pb-16">
-        <div className="container mx-auto px-4 py-8">
-          <div className="mb-8">
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="mb-4 flex items-center gap-2 text-indigo-600 dark:text-blue-400 hover:text-indigo-700 dark:hover:text-blue-300 transition-colors cursor-pointer"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to Dashboard
-            </button>
-            <h1 className="text-4xl font-bold mb-2 text-gray-900 dark:text-white dark:drop-shadow-[0_0_20px_rgba(59,130,246,0.8)]">
-              Analytics: {link.title || 'Untitled Link'}
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 truncate">{shortUrl}</p>
+    <div className="min-h-screen bg-[var(--paper)]">
+      <Header solid />
+      <main className="mx-auto max-w-6xl px-4 pb-16 pt-24 sm:px-6">
+        <button
+          type="button"
+          onClick={() => router.push('/dashboard')}
+          className="text-sm font-600 text-[var(--muted)] hover:text-[var(--ink)]"
+        >
+          ← Back to dashboard
+        </button>
+
+        <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-700 uppercase tracking-[0.14em] text-[var(--signal)]">Analytics</p>
+            <h1 className="mt-2 break-words font-display text-2xl font-800 tracking-tight sm:text-4xl">{link.title || 'Untitled link'}</h1>
+            <p className="mt-2 break-all font-600 text-sm text-[var(--signal)] sm:truncate sm:text-base">{shortUrl}</p>
+            <p className="mt-1 break-all text-sm text-[var(--muted)] sm:truncate">{link.destinationUrl}</p>
           </div>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <button type="button" className="btn-secondary !w-full !px-3 !py-2 text-sm sm:!w-auto" onClick={copyLink}>Copy link</button>
+            <button type="button" className="btn-secondary !w-full !px-3 !py-2 text-sm sm:!w-auto" onClick={exportCsv}>Export CSV</button>
+            <a href={shortUrl} target="_blank" rel="noreferrer" className="btn-primary col-span-2 !w-full !px-3 !py-2 text-sm sm:col-auto sm:!w-auto">Open link</a>
+          </div>
+        </div>
 
-          {!analytics ? (
-            <div className="bg-white/80 dark:bg-blue-950/60 backdrop-blur-xl rounded-2xl p-12 border-2 border-indigo-500/20 dark:border-blue-500/40 dark:shadow-[0_0_30px_rgba(59,130,246,0.4),0_0_60px_rgba(37,99,235,0.2)] text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-bold mb-2 text-gray-900 dark:text-white">Error Loading Analytics</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Unable to load analytics data.
+        <div className="mt-6 flex flex-wrap gap-2">
+          {RANGES.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setRange(item.id)}
+              className={`rounded-full border px-3 py-1.5 text-sm font-700 transition ${
+                range === item.id
+                  ? 'border-[var(--ink)] bg-[var(--ink)] text-[var(--paper)]'
+                  : 'border-[var(--line)] text-[var(--muted)] hover:border-[var(--ink)] hover:text-[var(--ink)]'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        {hasLocalTraffic && (
+          <div className="mt-5 rounded-2xl border border-[var(--amber)]/35 bg-[rgba(230,162,60,0.12)] px-4 py-3 text-sm">
+            <span className="font-700">Local testing mode:</span> clicks from localhost can’t resolve real countries/IPs.
+            Deploy Urlbeam and share the link publicly to see live geo, cities, and referrers.
+          </div>
+        )}
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard label="Total clicks" value={analytics?.totalClicks ?? 0} hint={`Range: ${range}`} />
+          <StatCard label="Unique sessions" value={analytics?.uniqueSessions ?? 0} hint="Approx. unique visitors" />
+          <StatCard label="Avg / day" value={analytics?.avgClicksPerDay ?? 0} hint="In selected range" />
+          <StatCard label="Lifetime sources" value={referrers.length} hint="Where traffic came from" />
+        </div>
+
+        <div className="surface mt-6 p-4 sm:p-5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h2 className="font-display text-lg font-700">Clicks over time</h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                Bar chart of how many times this link was clicked each day
+                {timeline[0]?.hour !== undefined ? ' (hourly for a single day)' : ''}.
               </p>
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-500 dark:via-violet-500 dark:to-pink-500 text-white font-semibold hover:scale-105 hover:shadow-lg dark:shadow-[0_0_30px_rgba(129,140,248,0.7),0_0_60px_rgba(167,139,250,0.5)] transition-all duration-300 cursor-pointer"
-              >
-                Back to Dashboard
-              </button>
             </div>
-          ) : (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-blue-900/60 dark:to-blue-800/60 backdrop-blur-lg rounded-xl p-5 border-2 border-indigo-200/50 dark:border-blue-500/50 dark:shadow-[0_0_20px_rgba(59,130,246,0.5),inset_0_0_20px_rgba(37,99,235,0.1)] hover:scale-[1.02] transition-all duration-300">
-                  <div className="text-sm font-semibold text-gray-600 dark:text-gray-200 mb-1">Total Clicks</div>
-                  <div className="text-3xl font-bold text-indigo-600 dark:text-white dark:drop-shadow-[0_0_15px_rgba(59,130,246,0.8)]">{analyticsData.totalClicks || 0}</div>
-                </div>
-                <div className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-emerald-900/60 dark:to-emerald-800/60 backdrop-blur-lg rounded-xl p-5 border-2 border-teal-200/50 dark:border-emerald-500/50 dark:shadow-[0_0_20px_rgba(16,185,129,0.5),inset_0_0_20px_rgba(5,150,105,0.1)] hover:scale-[1.02] transition-all duration-300">
-                  <div className="text-sm font-semibold text-gray-600 dark:text-gray-200 mb-1">Countries</div>
-                  <div className="text-3xl font-bold text-teal-600 dark:text-white dark:drop-shadow-[0_0_15px_rgba(16,185,129,0.8)]">{topCountries.length}</div>
-                </div>
-                <div className="bg-gradient-to-br from-violet-50 to-violet-100 dark:from-purple-900/60 dark:to-purple-800/60 backdrop-blur-lg rounded-xl p-5 border-2 border-violet-200/50 dark:border-purple-500/50 dark:shadow-[0_0_20px_rgba(168,85,247,0.5),inset_0_0_20px_rgba(147,51,234,0.1)] hover:scale-[1.02] transition-all duration-300">
-                  <div className="text-sm font-semibold text-gray-600 dark:text-gray-200 mb-1">Devices</div>
-                  <div className="text-3xl font-bold text-violet-600 dark:text-white dark:drop-shadow-[0_0_15px_rgba(168,85,247,0.8)]">{devices.length}</div>
-                </div>
-                <div className="bg-gradient-to-br from-pink-50 to-pink-100 dark:from-rose-900/60 dark:to-rose-800/60 backdrop-blur-lg rounded-xl p-5 border-2 border-pink-200/50 dark:border-rose-500/50 dark:shadow-[0_0_20px_rgba(244,63,94,0.5),inset_0_0_20px_rgba(225,29,72,0.1)] hover:scale-[1.02] transition-all duration-300">
-                  <div className="text-sm font-semibold text-gray-600 dark:text-gray-200 mb-1">Browsers</div>
-                  <div className="text-3xl font-bold text-pink-600 dark:text-white dark:drop-shadow-[0_0_15px_rgba(244,63,94,0.8)]">{browsers.length}</div>
-                </div>
+            <p className="shrink-0 text-xs font-700 uppercase tracking-[0.12em] text-[var(--muted)]">
+              {timeline[0]?.hour !== undefined ? 'Hourly' : 'Daily'}
+            </p>
+          </div>
+          <div className="mt-6 h-48 sm:h-56">
+            {timeline.length === 0 ? (
+              <div className="flex h-full w-full items-center justify-center text-sm text-[var(--muted)]">
+                No clicks in this range yet
               </div>
-
-              <div className="bg-white/80 dark:bg-blue-950/60 backdrop-blur-xl rounded-2xl p-6 border-2 border-indigo-500/20 dark:border-blue-500/40 dark:shadow-[0_0_30px_rgba(59,130,246,0.4),0_0_60px_rgba(37,99,235,0.2)]">
-                <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white dark:drop-shadow-[0_0_10px_rgba(59,130,246,0.6)]">
-                  Clicks Over Time
-                  {analyticsData.clicksOverTime?.[0]?.hour !== undefined && (
-                    <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
-                      (Hourly View)
-                    </span>
-                  )}
-                </h3>
-                <div className="h-64 flex items-end gap-1 sm:gap-2 overflow-x-auto pb-2">
-                  {analyticsData.clicksOverTime && analyticsData.clicksOverTime.length > 0 ? (
-                    analyticsData.clicksOverTime.map((item, idx) => {
-                      const height = maxTimeCount > 0 ? (item.count / maxTimeCount) * 100 : 0;
-                      const isHourlyView = item.hour !== undefined;
-                      const displayLabel = isHourlyView ? item.label : formatDate(item.date);
-                      const showLabel = isHourlyView ? (idx % 4 === 0 || item.count > 0) : true; // Show every 4th hour or hours with clicks
-                      
-                      return (
-                        <div key={idx} className={`flex flex-col items-center gap-1 ${isHourlyView ? 'min-w-[24px]' : 'flex-1'}`}>
-                          <div 
-                            className={`w-full bg-gradient-to-t from-indigo-500 to-indigo-400 dark:from-blue-500 dark:to-blue-400 rounded-t-lg transition-all hover:from-indigo-600 hover:to-indigo-500 dark:hover:from-blue-400 dark:hover:to-blue-300 dark:shadow-[0_0_10px_rgba(59,130,246,0.6)] cursor-pointer group relative`}
-                            style={{ height: `${Math.max(height, 2)}%`, minHeight: '2px' }}
-                            title={isHourlyView ? `${displayLabel} - ${item.count} clicks` : `${displayLabel} - ${item.count} clicks`}
-                          >
-                            {item.count > 0 && (
-                              <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none z-10">
-                                {item.count} {item.count === 1 ? 'click' : 'clicks'}
-                              </div>
-                            )}
-                          </div>
-                          {showLabel && (
-                            <div className="text-[10px] text-gray-500 dark:text-gray-400 text-center mt-1 whitespace-nowrap">
-                              {item.count > 0 && (
-                                <div className="font-semibold dark:text-white mb-0.5">{item.count}</div>
-                              )}
-                              <div className={isHourlyView ? 'text-[9px]' : ''}>{displayLabel}</div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="w-full text-center text-gray-500 dark:text-gray-400 py-8">No data available</div>
-                  )}
-                </div>
+            ) : (
+              <div className="flex h-full items-end gap-1 overflow-x-auto pb-1 sm:gap-1.5">
+                {timeline.map((item, idx) => {
+                  const barPx = Math.max(6, Math.round((item.count / maxTimeline) * 160));
+                  const showLabel =
+                    timeline.length <= 8
+                      ? true
+                      : item.hour !== undefined
+                        ? idx % 3 === 0
+                        : idx === 0 || idx === timeline.length - 1 || idx % Math.ceil(timeline.length / 5) === 0;
+                  return (
+                    <div
+                      key={`${item.label}-${idx}`}
+                      className="group flex h-full min-w-[36px] flex-1 flex-col items-center justify-end gap-2 sm:min-w-[28px]"
+                      title={`${item.label}: ${item.count} click${item.count === 1 ? '' : 's'}`}
+                    >
+                      <span className="text-[10px] font-700 text-[var(--signal)] opacity-100 sm:opacity-0 sm:transition sm:group-hover:opacity-100">
+                        {item.count}
+                      </span>
+                      <div
+                        className="w-full max-w-[40px] rounded-t-md bg-[var(--signal)] transition group-hover:bg-[var(--ink)]"
+                        style={{ height: `${barPx}px` }}
+                      />
+                      <span className={`h-8 w-full truncate text-center text-[9px] font-600 leading-tight text-[var(--muted)] sm:text-[10px] ${showLabel ? '' : 'invisible'}`}>
+                        {item.label}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
+            )}
+          </div>
+        </div>
 
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="bg-white/80 dark:bg-blue-950/60 backdrop-blur-xl rounded-2xl p-6 border-2 border-indigo-500/20 dark:border-blue-500/40 dark:shadow-[0_0_30px_rgba(59,130,246,0.4),0_0_60px_rgba(37,99,235,0.2)]">
-                  <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white dark:drop-shadow-[0_0_10px_rgba(59,130,246,0.6)]">Top Countries</h3>
-                  <div className="space-y-3">
-                    {topCountries.length > 0 ? (
-                      topCountries.map(([country, count]) => (
-                        <div key={country} className="flex items-center gap-3">
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-semibold text-gray-900 dark:text-white">{country}</span>
-                              <span className="text-sm font-bold text-indigo-600 dark:text-blue-400 dark:drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]">{count}</span>
-                            </div>
-                            <div className="w-full bg-gray-200 dark:bg-gray-700/50 rounded-full h-2">
-                              <div 
-                                className="bg-gradient-to-r from-indigo-500 to-indigo-600 dark:from-blue-500 dark:to-blue-400 h-2 rounded-full transition-all dark:shadow-[0_0_8px_rgba(59,130,246,0.5)]"
-                                style={{ width: `${(count / maxCountryCount) * 100}%` }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center text-gray-500 dark:text-gray-400 py-4">No country data</div>
-                    )}
-                  </div>
-                </div>
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <RankList title="Top countries" items={countries} />
+          <RankList title="Top cities" items={(analytics?.topCities || []).map((c) => ({ name: c.city, count: c.count }))} />
+          <RankList title="Devices" items={devices} />
+          <RankList title="Browsers" items={browsers} />
+          <RankList title="Operating systems" items={osList} />
+          <RankList title="Referrers" items={referrers} />
+          <RankList title="Languages" items={languages} empty="No language signals yet" />
+          <RankList title="UTM sources" items={utmSources} empty="Add ?utm_source=… to track campaigns" />
+        </div>
 
-                <div className="bg-white/80 dark:bg-blue-950/60 backdrop-blur-xl rounded-2xl p-6 border-2 border-indigo-500/20 dark:border-blue-500/40 dark:shadow-[0_0_30px_rgba(59,130,246,0.4),0_0_60px_rgba(37,99,235,0.2)]">
-                  <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white dark:drop-shadow-[0_0_10px_rgba(59,130,246,0.6)]">Devices</h3>
-                  <div className="space-y-3">
-                    {devices.length > 0 ? (
-                      devices.map(([device, count]) => (
-                        <div key={device} className="flex items-center gap-3">
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-semibold text-gray-900 dark:text-white">{device}</span>
-                              <span className="text-sm font-bold text-teal-600 dark:text-emerald-400 dark:drop-shadow-[0_0_8px_rgba(16,185,129,0.6)]">{count}</span>
-                            </div>
-                            <div className="w-full bg-gray-200 dark:bg-gray-700/50 rounded-full h-2">
-                              <div 
-                                className="bg-gradient-to-r from-teal-500 to-teal-600 dark:from-emerald-500 dark:to-emerald-400 h-2 rounded-full transition-all dark:shadow-[0_0_8px_rgba(16,185,129,0.5)]"
-                                style={{ width: `${(count / maxDeviceCount) * 100}%` }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center text-gray-500 dark:text-gray-400 py-4">No device data</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="bg-white/80 dark:bg-blue-950/60 backdrop-blur-xl rounded-2xl p-6 border-2 border-indigo-500/20 dark:border-blue-500/40 dark:shadow-[0_0_30px_rgba(59,130,246,0.4),0_0_60px_rgba(37,99,235,0.2)]">
-                  <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white dark:drop-shadow-[0_0_10px_rgba(59,130,246,0.6)]">Browsers</h3>
-                  <div className="space-y-2">
-                    {browsers.length > 0 ? (
-                      browsers.map(([browser, count]) => (
-                        <div key={browser} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-600/30">
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">{browser}</span>
-                          <span className="text-sm font-bold text-violet-600 dark:text-purple-400 dark:drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]">{count}</span>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center text-gray-500 dark:text-gray-400 py-4">No browser data</div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="bg-white/80 dark:bg-blue-950/60 backdrop-blur-xl rounded-2xl p-6 border-2 border-indigo-500/20 dark:border-blue-500/40 dark:shadow-[0_0_30px_rgba(59,130,246,0.4),0_0_60px_rgba(37,99,235,0.2)]">
-                  <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white dark:drop-shadow-[0_0_10px_rgba(59,130,246,0.6)]">Operating Systems</h3>
-                  <div className="space-y-2">
-                    {osList.length > 0 ? (
-                      osList.map(([os, count]) => (
-                        <div key={os} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-600/30">
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">{os}</span>
-                          <span className="text-sm font-bold text-pink-600 dark:text-rose-400 dark:drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]">{count}</span>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center text-gray-500 dark:text-gray-400 py-4">No OS data</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white/80 dark:bg-blue-950/60 backdrop-blur-xl rounded-2xl p-6 border-2 border-indigo-500/20 dark:border-blue-500/40 dark:shadow-[0_0_30px_rgba(59,130,246,0.4),0_0_60px_rgba(37,99,235,0.2)]">
-                <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white dark:drop-shadow-[0_0_10px_rgba(59,130,246,0.6)]">Recent Clicks</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-600/50">
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Time</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">IP Address</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Country</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Device</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Browser</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-gray-400">Referrer</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analyticsData.recentClicks && analyticsData.recentClicks.length > 0 ? (
-                        analyticsData.recentClicks.map(click => (
-                          <tr key={click.id} className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                            <td className="py-3 px-4 text-xs text-gray-600 dark:text-gray-400">{formatTime(click.timestamp)}</td>
-                            <td className="py-3 px-4 text-xs font-mono text-gray-700 dark:text-gray-300">{click.ip}</td>
-                            <td className="py-3 px-4 text-xs text-gray-700 dark:text-gray-300">{click.country}</td>
-                            <td className="py-3 px-4 text-xs text-gray-700 dark:text-gray-300">{click.device}</td>
-                            <td className="py-3 px-4 text-xs text-gray-700 dark:text-gray-300">{click.browser}</td>
-                            <td className="py-3 px-4 text-xs text-gray-600 dark:text-gray-400 truncate max-w-[150px]">{click.referrer}</td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">No clicks recorded yet</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {(!analyticsData || analyticsData.totalClicks === 0) && (
-                <div className="bg-white/80 dark:bg-blue-950/60 backdrop-blur-xl rounded-2xl p-8 border-2 border-indigo-500/20 dark:border-blue-500/40 dark:shadow-[0_0_30px_rgba(59,130,246,0.4),0_0_60px_rgba(37,99,235,0.2)] text-center">
-                  <p className="text-gray-600 dark:text-gray-400">
-                    This link hasn't been clicked yet.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
+        <div className="surface mt-6 overflow-hidden">
+          <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-4">
+            <h2 className="font-display text-lg font-700">Recent clicks</h2>
+            <p className="text-xs text-[var(--muted)]">Latest 100 in range</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[860px] text-left text-sm">
+              <thead className="bg-[var(--paper)] text-xs uppercase tracking-[0.08em] text-[var(--muted)]">
+                <tr>
+                  {['Time', 'Location', 'Device', 'Browser', 'OS', 'Referrer', 'Language'].map((h) => (
+                    <th key={h} className="px-4 py-3 font-700">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(analytics?.recentClicks || []).length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-10 text-center text-[var(--muted)]">No clicks recorded in this range</td>
+                  </tr>
+                ) : (
+                  analytics.recentClicks.map((click) => (
+                    <tr key={click.id} className="border-t border-[var(--line)]">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {new Date(click.timestamp).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-600">{click.city}</div>
+                        <div className="text-xs text-[var(--muted)]">{click.country} · {click.ip}</div>
+                      </td>
+                      <td className="px-4 py-3">{click.device}</td>
+                      <td className="px-4 py-3">{click.browser}</td>
+                      <td className="px-4 py-3">{click.os}</td>
+                      <td className="max-w-[180px] truncate px-4 py-3">{click.referrer}</td>
+                      <td className="px-4 py-3">{click.language}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </main>
     </div>

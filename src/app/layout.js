@@ -1,45 +1,78 @@
-import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
+import { Syne, Manrope } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SessionProvider } from "@/components/SessionProvider";
 import { ReduxProvider } from "@/store/ReduxProvider";
 import { ToastProvider } from "@/components/ToastContainer";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
+import { buildPageMetadata, SITE_NAME, SITE_TAGLINE, getSiteUrl } from "@/lib/seo";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const display = Syne({
+  variable: "--font-display",
   subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const body = Manrope({
+  variable: "--font-body",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const metadata = {
-  title: "URL Shortener - Modern Link Management",
-  description: "A beautiful, fast, responsive URL-shortener with analytics and real-time updates",
+  ...buildPageMetadata({
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    path: '/',
+  }),
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/urlbeam-logo.png', type: 'image/png' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: [{ url: '/urlbeam-logo.png' }],
+    shortcut: ['/icon.svg'],
+  },
+  applicationName: SITE_NAME,
+  referrer: 'origin-when-cross-origin',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f3f5f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#070b12" },
+  ],
+};
+
+const themeInitScript = `
+(function() {
+  try {
+    var t = localStorage.getItem('theme-preference');
+    if (t === 'dark') document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({ children }) {
+  const siteUrl = getSiteUrl();
+
   return (
-    <html lang="en" suppressHydrationWarning className="bg-white dark:bg-black transition-colors duration-500">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white dark:bg-black text-gray-900 dark:text-white transition-colors duration-500`}
-      >
-        {/* Google tag (gtag.js) */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-1V99MD4RLP"
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-1V99MD4RLP');
-          `}
-        </Script>
+    <html lang="en" suppressHydrationWarning className={`${display.variable} ${body.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <link rel="canonical" href={siteUrl} />
+      </head>
+      <body className="antialiased bg-[var(--paper)] text-[var(--ink)]">
+        <GoogleAnalytics gaId="G-1V99MD4RLP" />
         <SessionProvider>
           <ReduxProvider>
             <ThemeProvider>
