@@ -1,4 +1,4 @@
-import { Syne, Manrope } from "next/font/google";
+import { Bricolage_Grotesque, Figtree } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SessionProvider } from "@/components/SessionProvider";
@@ -7,13 +7,15 @@ import { ToastProvider } from "@/components/ToastContainer";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { buildPageMetadata, SITE_NAME, SITE_TAGLINE, getSiteUrl } from "@/lib/seo";
 
-const display = Syne({
+// Display: bold, distinctive headlines (Google Fonts via next/font)
+const display = Bricolage_Grotesque({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["500", "600", "700", "800"],
 });
 
-const body = Manrope({
+// Body: clean, modern reading text with more character than Manrope
+const body = Figtree({
   variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
