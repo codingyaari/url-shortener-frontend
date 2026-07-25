@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { signIn, useSession } from 'next-auth/react';
 import { Header } from '@/components/Header';
+import { SiteFooter } from '@/components/SiteFooter';
 
 const plans = [
   {
@@ -84,6 +85,7 @@ export function PricingPage() {
         </div>
         <p className="mt-6 text-sm text-[var(--muted)]">* Custom domains rolling out on Business. Stripe billing can be connected when you go live.</p>
       </main>
+      <SiteFooter />
     </div>
   );
 }

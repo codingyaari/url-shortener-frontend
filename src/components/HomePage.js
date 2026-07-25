@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useSession, signIn } from 'next-auth/react';
 import { useEffect } from 'react';
 import { Header } from '@/components/Header';
+import { SiteFooter } from '@/components/SiteFooter';
 
 export function HomePage() {
   const { data: session } = useSession();
@@ -163,7 +164,10 @@ export function HomePage() {
               URL shortener FAQs
             </h2>
             <p className="mt-3 text-[var(--muted)]">
-              Common questions about shortening URLs, tracking clicks, and creating branded short links with Urlbeam.
+              Common questions about shortening URLs, tracking clicks, and creating branded short links with Urlbeam.{' '}
+              <Link href="/faq" className="font-700 text-[var(--ink)] hover:text-[var(--signal)]">
+                See all FAQs →
+              </Link>
             </p>
           </div>
           <div className="mt-8 grid gap-4 md:grid-cols-3">
@@ -189,15 +193,33 @@ export function HomePage() {
           </div>
         </section>
 
-        <footer className="border-t border-[var(--line)]">
-          <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-sm text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <p>© {new Date().getFullYear()} Urlbeam. Built for fast, beautiful short links.</p>
-            <div className="flex gap-4">
-              <Link href="/pricing">Pricing</Link>
-              <Link href="/dashboard">Dashboard</Link>
+        <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-2xl">
+              <h2 className="font-display text-3xl font-700 tracking-tight sm:text-4xl">From the blog</h2>
+              <p className="mt-3 text-[var(--muted)]">
+                Guides on shortening URLs, QR codes, custom short links, and click tracking.
+              </p>
             </div>
+            <Link href="/blog" className="btn-secondary w-full sm:w-auto">
+              Browse all guides
+            </Link>
           </div>
-        </footer>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {[
+              ['how-to-shorten-a-url', 'How to shorten a URL in 30 seconds'],
+              ['bitly-alternative-free-url-shortener', 'Looking for a Bitly alternative?'],
+              ['what-is-urlbeam', 'What is Urlbeam?'],
+            ].map(([slug, title]) => (
+              <Link key={slug} href={`/blog/${slug}`} className="surface block p-5 hover:border-[var(--ink)]">
+                <h3 className="font-display text-lg font-700">{title}</h3>
+                <span className="mt-3 inline-block text-sm font-700 text-[var(--signal)]">Read →</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <SiteFooter />
       </main>
     </div>
   );

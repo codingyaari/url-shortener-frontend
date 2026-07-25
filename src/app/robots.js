@@ -1,4 +1,4 @@
-import { getSiteUrl, SITE_NAME, SITE_DESCRIPTION } from '@/lib/seo';
+import { getSiteUrl } from '@/lib/seo';
 
 export default function robots() {
   const siteUrl = getSiteUrl();
@@ -6,7 +6,7 @@ export default function robots() {
     rules: [
       {
         userAgent: '*',
-        allow: ['/', '/pricing', '/bio/'],
+        allow: ['/', '/pricing', '/features', '/blog', '/faq', '/about', '/privacy', '/terms', '/bio/'],
         disallow: ['/dashboard', '/api/', '/unlock/'],
       },
     ],

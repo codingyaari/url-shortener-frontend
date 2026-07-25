@@ -9,6 +9,12 @@ const RESERVED = new Set([
   'auth',
   'login',
   'r',
+  'blog',
+  'faq',
+  'features',
+  'about',
+  'privacy',
+  'terms',
 ]);
 
 export function middleware(request) {

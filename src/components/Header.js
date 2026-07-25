@@ -32,9 +32,10 @@ export function Header({ solid = false }) {
   }, [menuOpen]);
 
   const navLinks = [
-    { href: '/#features', label: 'Features' },
+    { href: '/features', label: 'Features' },
     { href: '/pricing', label: 'Pricing' },
-    { href: '/#how', label: 'How it works' },
+    { href: '/blog', label: 'Blog' },
+    { href: '/faq', label: 'FAQ' },
   ];
 
   return (

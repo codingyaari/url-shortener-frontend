@@ -1,5 +1,8 @@
 export const SITE_NAME = 'Urlbeam';
 export const SITE_TAGLINE = 'Short links that convert';
+export const SITE_OPERATOR = 'CodingYari';
+export const SITE_CONTACT_EMAIL = 'support@codingyari.com';
+export const SITE_DOMAIN = 'shortener.codingyari.com';
 export const SITE_DESCRIPTION =
   'Urlbeam is a free URL shortener with custom short links, QR codes, click analytics, password protection, UTM tracking, and link-in-bio pages. Shorten URLs, track every click, and share branded links.';
 
