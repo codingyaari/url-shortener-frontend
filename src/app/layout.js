@@ -24,6 +24,9 @@ export const metadata = {
     title: `${SITE_NAME} — ${SITE_TAGLINE}`,
     path: '/',
   }),
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || 'ILObPKaauwKqFCPCguJ39qY3ADTyGalIUUORNGs9vN4',
+  },
   icons: {
     icon: [
       { url: '/icon.svg', type: 'image/svg+xml' },
